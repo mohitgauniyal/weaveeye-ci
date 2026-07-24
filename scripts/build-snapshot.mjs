@@ -54,17 +54,28 @@ function parseDDGOwnership(raw) {
   return map;
 }
 
+// Disconnect's shape:
+//   categories: { <CategoryName>: [ { <CompanyName>: { <url>: [<domain>, …] } }, … ] }
+// Note each category maps to an ARRAY of single-key company objects — iterating
+// it as a plain object gives numeric indices, which is exactly the bug that
+// produced numeric "owners". Walk it as an array.
 function parseDisconnect(raw) {
   const map = {};
-  for (const [categoryName, companies] of Object.entries(raw.categories || {})) {
+  for (const [categoryName, companyArray] of Object.entries(raw.categories || {})) {
+    if (!Array.isArray(companyArray)) continue;
     const category = DISC_CATEGORY_MAP[categoryName] || null;
-    for (const [companyName, domainList] of Object.entries(companies)) {
-      for (const domainObj of Object.values(domainList)) {
-        for (const domain of Object.keys(domainObj)) {
-          const clean = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
-          // A Disconnect "parent" of "0" is a placeholder, not a company.
-          const parent = companyName && companyName !== "0" ? companyName : null;
-          if (!map[clean] && (category || parent)) map[clean] = { category, parent };
+
+    for (const companyEntry of companyArray) {
+      for (const [companyName, urlMap] of Object.entries(companyEntry)) {
+        const parent = companyName && companyName !== "0" ? companyName : null;
+        for (const domainList of Object.values(urlMap)) {
+          if (!Array.isArray(domainList)) continue;
+          for (const domain of domainList) {
+            const clean = String(domain).replace(/^https?:\/\//, "").replace(/\/$/, "");
+            if (clean && !map[clean] && (category || parent)) {
+              map[clean] = { category, parent };
+            }
+          }
         }
       }
     }
