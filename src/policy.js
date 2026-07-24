@@ -147,13 +147,13 @@ export function evaluate(scan, policy = DEFAULT_POLICY) {
 
 function reasonFor(verdict, count, action) {
   if (count === 0) {
-    if (verdict === "COMPLIANT") return "No consent-requiring trackers fired before consent.";
-    if (verdict === "INCONCLUSIVE") return "Banner could not be operated, but no in-scope trackers fired first.";
-    return "No in-scope trackers fired before consent.";
+    if (verdict === "COMPLIANT") return "No third party received data before consent.";
+    if (verdict === "INCONCLUSIVE") return "Banner could not be operated, but no in-scope data went out first.";
+    return "No in-scope data was sent before consent.";
   }
-  const noun = `${count} consent-requiring ${count === 1 ? "tracker" : "trackers"}`;
-  if (action === "warn") return `${noun} fired before consent (warning — not failing the build).`;
-  if (verdict === "NO_BANNER_DETECTED") return `${noun} fired with no consent banner present.`;
-  if (verdict === "INCONCLUSIVE") return `${noun} fired before a banner the scanner could not accept.`;
-  return `${noun} fired before consent was given.`;
+  const noun = `${count} third ${count === 1 ? "party" : "parties"}`;
+  if (action === "warn") return `${noun} received data before consent (warning — not failing the build).`;
+  if (verdict === "NO_BANNER_DETECTED") return `${noun} received data with no consent banner present.`;
+  if (verdict === "INCONCLUSIVE") return `${noun} received data before a banner the scanner could not accept.`;
+  return `${noun} received data before consent was given.`;
 }

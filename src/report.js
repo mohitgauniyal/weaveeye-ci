@@ -54,7 +54,7 @@ export function formatTerminal(scan, result, { color = true } = {}) {
 
   if (result.violations.length) {
     lines.push("");
-    lines.push(`${c.bold}Trackers that fired before consent:${c.reset}`);
+    lines.push(`${c.bold}Data sent to third parties before consent:${c.reset}`);
     const rows = result.violations.map(n => [
       fmtMs(n.time),
       n.category,
@@ -63,6 +63,14 @@ export function formatTerminal(scan, result, { color = true } = {}) {
       fmtBytes(n.bytes),
     ]);
     lines.push(...renderTable(["FIRED", "CATEGORY", "DOMAIN", "OWNER", "DATA"], rows, c));
+  }
+
+  // Advisory: tags that loaded before consent but may be Consent-Mode-gated.
+  const gated = scan.gatedTags?.count || 0;
+  if (gated) {
+    const names = scan.gatedTags.nodes.slice(0, 5).map(n => n.id).join(", ");
+    lines.push("");
+    lines.push(`${c.dim}Plus ${gated} tag${gated !== 1 ? "s" : ""} that loaded before consent but may be gated by Consent Mode (not counted as violations): ${names}${gated > 5 ? ", …" : ""}${c.reset}`);
   }
 
   if (result.allowed.length) {
@@ -105,6 +113,7 @@ export function formatJson(scan, result) {
       before: scan.before.count,
       after: scan.after.count,
       violations: result.violations.length,
+      gatedTags: scan.gatedTags?.count || 0,
       allowed: result.allowed.length,
     },
     violations: result.violations.map(n => ({
@@ -140,7 +149,7 @@ export function formatMarkdown(scan, result) {
 
   if (result.violations.length) {
     out.push("");
-    out.push(`<details open><summary><b>${result.violations.length} tracker(s) fired before consent</b></summary>`);
+    out.push(`<details open><summary><b>${result.violations.length} third part${result.violations.length === 1 ? "y" : "ies"} received data before consent</b></summary>`);
     out.push("");
     out.push("| Fired at | Category | Domain | Owner | Data |");
     out.push("|---|---|---|---|---|");
@@ -148,6 +157,12 @@ export function formatMarkdown(scan, result) {
       out.push(`| ${fmtMs(n.time)} | ${n.category} | \`${n.id}\` | ${n.parent || "—"} | ${fmtBytes(n.bytes)} |`);
     }
     out.push("</details>");
+  }
+
+  const gated = scan.gatedTags?.count || 0;
+  if (gated) {
+    out.push("");
+    out.push(`<sub>Plus ${gated} tag${gated !== 1 ? "s" : ""} that loaded before consent but may be gated by Consent Mode — not counted as violations.</sub>`);
   }
 
   if (result.allowed.length) {

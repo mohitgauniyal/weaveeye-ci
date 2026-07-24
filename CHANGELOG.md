@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.0
+
+- **Distinguish confirmed data transfers from Consent-Mode-gated tags.** The
+  gate now fails only on third parties that actually received data before
+  consent — ad exchanges/data brokers (which Consent Mode never gates), or any
+  tag that sent a pixel/beacon/XHR. A tag that merely loaded a script before
+  consent (e.g. googletagmanager.com, which Consent Mode can hold in a denied
+  state) is reported separately as an advisory "gated tag", not a violation.
+  This neutralizes the main technical objection and removes false positives
+  (e.g. a site whose only pre-consent tag is a gated GTM is now COMPLIANT).
+
 ## v0.1.2
 
 - **Blocked scans are never a confident verdict.** A scan served a bot-wall

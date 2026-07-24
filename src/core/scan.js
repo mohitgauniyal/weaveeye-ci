@@ -10,9 +10,21 @@ import { chromium } from "playwright";
 import { classifyDomain } from "./classifier.js";
 import { detectCMP, acceptCMP } from "./cmp.js";
 import { buildLabel, sizeFromBytes } from "./labels.js";
-import { computeVerdict, countByCategory, findIllegalNodes } from "./verdict.js";
+import { computeVerdict, countByCategory, findConfirmedViolations, findGatedTags } from "./verdict.js";
 
 const SKIP_PROTOCOLS = ["data:", "blob:", "chrome-extension:"];
+
+// Resource types that represent data actually being sent/received, as opposed
+// to a script/document/style/font merely loading. A pixel, beacon, XHR, fetch,
+// websocket or media request to a tracker is a real data flow.
+const DATA_RESOURCE_TYPES = new Set([
+  "image", "media", "xhr", "fetch", "eventsource", "websocket", "ping",
+]);
+
+function isDataRequest(resourceType, method) {
+  if (method && method.toUpperCase() === "POST") return true;
+  return DATA_RESOURCE_TYPES.has(resourceType);
+}
 
 const DEFAULTS = {
   timeout: 30000,        // navigation timeout
@@ -114,10 +126,15 @@ export async function consentScan(rawUrl, options = {}) {
         if (!requests.has(host)) {
           requests.set(host, {
             bytes: 0, time: Date.now() - pageStart,
-            resourceType: req.resourceType(), count: 0,
+            resourceType: req.resourceType(), count: 0, dataFlowBefore: false,
           });
         }
-        if (consentClickedAt === null) beforeSet.add(host);
+        const preConsent = consentClickedAt === null;
+        // Record whether real data went to this host *before* consent.
+        if (preConsent && isDataRequest(req.resourceType(), req.method())) {
+          requests.get(host).dataFlowBefore = true;
+        }
+        if (preConsent) beforeSet.add(host);
         else if (!beforeSet.has(host)) afterSet.add(host);
       } catch { }
     });
@@ -209,19 +226,21 @@ export async function consentScan(rawUrl, options = {}) {
 
     const buildNodes = (hostSet) =>
       [...hostSet].map(host => {
-        const req = requests.get(host) || { bytes: 0, time: 0 };
+        const req = requests.get(host) || { bytes: 0, time: 0, dataFlowBefore: false };
         const { category, parent } = classifyDomain(host);
         const bytes = req.bytes || 0;
         return {
           id: host, label: buildLabel(host), category, parent: parent || null,
           bytes, time: req.time, size: sizeFromBytes(bytes),
+          dataFlow: req.dataFlowBefore || false,
         };
       }).sort((a, b) => a.time - b.time);
 
     const beforeNodes = buildNodes(beforeSet);
     const afterNodes = buildNodes(afterSet);
-    const illegalNodes = findIllegalNodes(beforeNodes);
-    const verdict = computeVerdict({ bannerDetected, consentAccepted, illegalCount: illegalNodes.length });
+    const violationNodes = findConfirmedViolations(beforeNodes);
+    const gatedTagNodes = findGatedTags(beforeNodes);
+    const verdict = computeVerdict({ bannerDetected, consentAccepted, violationCount: violationNodes.length });
 
     return {
       url,
@@ -236,7 +255,11 @@ export async function consentScan(rawUrl, options = {}) {
       verdict,
       before: { nodes: beforeNodes, count: beforeNodes.length },
       after: { nodes: afterNodes, count: afterNodes.length },
-      illegal: { nodes: illegalNodes, count: illegalNodes.length, categories: countByCategory(illegalNodes) },
+      // Confirmed pre-consent data transfers — the build-failing violations.
+      illegal: { nodes: violationNodes, count: violationNodes.length, categories: countByCategory(violationNodes) },
+      // Consent-requiring tags that only loaded a script pre-consent — advisory
+      // (may be gated by Consent Mode).
+      gatedTags: { nodes: gatedTagNodes, count: gatedTagNodes.length, categories: countByCategory(gatedTagNodes) },
     };
   } finally {
     await browser.close();
