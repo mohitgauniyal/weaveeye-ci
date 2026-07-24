@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.1
+
+- **Surface lazy-loaded trackers.** Every scan path now scrolls and settles, so
+  ad/tracker scripts that load on scroll or idle are captured. Previously only
+  the post-consent path scrolled, undercounting sites with no banner.
+- **Detect bot walls.** Pages served an anti-automation challenge (Cloudflare,
+  PerimeterX/HUMAN, DataDome, Incapsula) or a near-empty body are now flagged
+  `blocked`, so a scan the site blocked is never reported as a clean pass.
+  Reflected in all report formats and the JSON output.
+
 ## v0.1.0 — first release
 
 Initial public release of **weaveeye-ci** — a pre-consent tracking gate for CI.
