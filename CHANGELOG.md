@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.2
+
+- **Blocked scans are never a confident verdict.** A scan served a bot-wall
+  challenge no longer returns pass/fail from unreliable data — it reports a
+  distinct `blocked` outcome that does not break the build.
+
 ## v0.1.1
 
 - **Surface lazy-loaded trackers.** Every scan path now scrolls and settles, so
