@@ -1,0 +1,34 @@
+{
+  "name": "weaveeye-ci",
+  "version": "0.1.0",
+  "description": "Fail your build when a tracker fires before consent. A pre-consent tracking gate for CI.",
+  "type": "module",
+  "bin": {
+    "weaveeye-scan": "src/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "data/trackers.snapshot.json",
+    "action.yml"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "build:snapshot": "node scripts/build-snapshot.mjs",
+    "scan": "node src/cli.js"
+  },
+  "keywords": [
+    "gdpr", "ccpa", "cipa", "consent", "privacy", "cookies",
+    "trackers", "compliance", "ci", "github-action", "playwright"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.44.0",
+    "yaml": "^2.4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
