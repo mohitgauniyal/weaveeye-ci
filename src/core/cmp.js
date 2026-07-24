@@ -119,11 +119,23 @@ export const CMP_DEFINITIONS = [
  */
 export async function detectCMP(page) {
     // Pass 1 — an accept button in the DOM. Deliberately does not require
-    // visibility: Fides and others render the button hidden before revealing
-    // the banner, and we click via JS anyway.
+    // visibility for named CMPs: Fides and others render the button hidden
+    // before revealing the banner, and we click via JS anyway.
     for (const cmp of CMP_DEFINITIONS) {
         try {
-            if (await page.$(cmp.selector)) return { ...cmp, actionable: true };
+            const btn = await page.$(cmp.selector);
+            if (!btn) continue;
+
+            // The generic selectors are broad enough to match a non-consent
+            // "Accept" button (terms, an app modal, a newsletter). Require a
+            // consent container to also be present AND the button to be
+            // visible, so a stray button can't be mistaken for a banner.
+            if (cmp.genericFallback) {
+                const container = await page.$(cmp.detect);
+                if (!container) continue;
+                if (!(await btn.isVisible().catch(() => false))) continue;
+            }
+            return { ...cmp, actionable: true };
         } catch { }
     }
 

@@ -65,11 +65,34 @@ test("the generic fallback never reports a container-only banner", async () => {
   assert.equal(cmp, null);
 });
 
-test("the generic fallback still works when a real accept button is present", async () => {
+test("the generic fallback matches only with a container AND a visible button", async () => {
   const generic = def("Generic");
-  const cmp = await detectCMP(fakePage({ present: [generic.selector] }));
+  // Button + consent container + visible → a real generic banner.
+  const cmp = await detectCMP(fakePage({
+    present: [generic.selector, generic.detect],
+    visible: [generic.selector],
+  }));
   assert.equal(cmp.name, "Generic");
   assert.equal(cmp.actionable, true);
+});
+
+test("a stray accept button with no consent container is not a generic banner", async () => {
+  // e.g. an "Accept terms" button on a page with no cookie/consent context.
+  const generic = def("Generic");
+  const cmp = await detectCMP(fakePage({
+    present: [generic.selector],
+    visible: [generic.selector],
+  }));
+  assert.equal(cmp, null);
+});
+
+test("a generic button inside a container but hidden does not match", async () => {
+  const generic = def("Generic");
+  const cmp = await detectCMP(fakePage({
+    present: [generic.selector, generic.detect],
+    visible: [], // button present but not visible
+  }));
+  assert.equal(cmp, null);
 });
 
 test("returns null when the page has no consent machinery at all", async () => {
