@@ -48,6 +48,10 @@ export function formatTerminal(scan, result, { color = true } = {}) {
   meta.push(`${scan.before.count} before / ${scan.after.count} after`);
   lines.push(`${c.dim}${meta.join("   ")}${c.reset}`);
 
+  if (scan.blocked) {
+    lines.push(`${c.yellow}⚠ Scanner may have been blocked — ${scan.blockReason}. Result is unreliable.${c.reset}`);
+  }
+
   if (result.violations.length) {
     lines.push("");
     lines.push(`${c.bold}Trackers that fired before consent:${c.reset}`);
@@ -93,6 +97,8 @@ export function formatJson(scan, result) {
     passed: result.passed,
     action: result.action,
     reason: result.reason,
+    blocked: scan.blocked || false,
+    blockReason: scan.blockReason || null,
     cmp: scan.cmpName,
     consentAccepted: scan.consentAccepted,
     counts: {
@@ -121,6 +127,10 @@ export function formatMarkdown(scan, result) {
   out.push("");
   out.push(`**\`${scan.hostname}\`** — ${VERDICT_LABEL[scan.verdict] || scan.verdict}. ${result.reason}`);
   out.push("");
+  if (scan.blocked) {
+    out.push(`> ⚠️ The scanner may have been blocked (${scan.blockReason}). Treat this result as unreliable.`);
+    out.push("");
+  }
 
   const meta = [];
   if (scan.cmpName) meta.push(`CMP detected: **${scan.cmpName}**`);

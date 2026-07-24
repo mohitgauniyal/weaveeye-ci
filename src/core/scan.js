@@ -17,11 +17,54 @@ const SKIP_PROTOCOLS = ["data:", "blob:", "chrome-extension:"];
 const DEFAULTS = {
   timeout: 30000,        // navigation timeout
   bannerWait: 6000,      // wait for a banner to appear
-  postConsentWait: 8000, // wait for post-consent requests to fire
+  postConsentWait: 8000, // wait for post-consent requests to fire after accepting
+  noConsentWait: 3500,   // settle time when no consent was accepted
   headless: true,
   chromiumPath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
   onEvent: null,         // optional progress callback (phase, detail)
 };
+
+// Signatures of a bot-detection / anti-automation challenge page. Matched
+// case-insensitively against the page title and a slice of visible text.
+const BLOCK_SIGNATURES = [
+  "pardon our interruption",          // HUMAN / PerimeterX
+  "verify you are a human",
+  "verifying you are human",
+  "are you a human",
+  "just a moment",                    // Cloudflare
+  "attention required",               // Cloudflare
+  "access denied",
+  "access to this page has been denied",
+  "you have been blocked",
+  "enable javascript and cookies to continue", // DataDome
+  "please enable js",
+  "request unsuccessful. incapsula",  // Imperva Incapsula
+  "checking your browser before",
+  "ddos protection by",
+];
+
+// Pure classification of a page's title + text. Exported for testing.
+export function classifyBlock(title = "", text = "") {
+  const haystack = `${title}\n${text}`.toLowerCase();
+  const hit = BLOCK_SIGNATURES.find(sig => haystack.includes(sig));
+  if (hit) return { blocked: true, reason: `challenge page ("${hit}")` };
+  if (text.trim().length < 40) {
+    return { blocked: true, reason: "empty page after load (likely challenge or block)" };
+  }
+  return { blocked: false, reason: null };
+}
+
+async function detectBlock(page) {
+  try {
+    const { title, text } = await page.evaluate(() => ({
+      title: document.title || "",
+      text: (document.body?.innerText || "").slice(0, 2000),
+    }));
+    return classifyBlock(title, text);
+  } catch {
+    return { blocked: false, reason: null };
+  }
+}
 
 function normalizeUrl(rawUrl) {
   let url = String(rawUrl).trim();
@@ -117,6 +160,19 @@ export async function consentScan(rawUrl, options = {}) {
     let consentAccepted = false;
     let cmpName = null;
 
+    // Scroll to trigger lazy-loaded content, then settle. Used in every branch:
+    // ad and tracker scripts are very often loaded on scroll/idle rather than at
+    // page load. Without this, a site that lazy-loads its tags reads as clean —
+    // a false negative, the dangerous direction. When no valid consent was
+    // given, everything this surfaces is correctly counted as pre-consent.
+    const settleWithScroll = async (initialWait) => {
+      await page.waitForTimeout(initialWait);
+      await page.evaluate(() => window.scrollTo(0, 600)).catch(() => { });
+      await page.waitForTimeout(2500);
+      await page.evaluate(() => window.scrollTo(0, 1400)).catch(() => { });
+      await page.waitForTimeout(2500);
+    };
+
     if (cmp) {
       bannerDetected = true;
       cmpName = cmp.name;
@@ -127,17 +183,27 @@ export async function consentScan(rawUrl, options = {}) {
 
       if (clicked) {
         consentAccepted = true;
-        await page.waitForTimeout(opts.postConsentWait);
-        await page.evaluate(() => window.scrollTo(0, 500)).catch(() => { });
-        await page.waitForTimeout(3000);
-        await page.evaluate(() => window.scrollTo(0, 1200)).catch(() => { });
-        await page.waitForTimeout(3000);
+        // Measures post-consent loading (the "after" set).
+        await settleWithScroll(opts.postConsentWait);
       } else {
         // Could not accept — everything recorded stays pre-consent, but we
         // cannot observe post-consent behaviour. Verdict becomes INCONCLUSIVE.
+        // Still scroll, so a banner-blocked page doesn't undercount "before".
         consentClickedAt = null;
+        await settleWithScroll(opts.noConsentWait);
       }
+    } else {
+      // No banner: scroll to surface lazy pre-consent trackers. Everything here
+      // is "before" — no consent was ever requested.
+      emit("no-banner-settle", {});
+      await settleWithScroll(opts.noConsentWait);
     }
+
+    // Did we actually see the real page, or a bot-detection challenge? A
+    // scanner that reports "clean" on a page it was blocked from produces a
+    // false negative — the worst kind of error for a compliance tool — so this
+    // is surfaced as a distinct signal rather than swallowed.
+    const block = await detectBlock(page).catch(() => null);
 
     await context.close();
 
@@ -165,6 +231,8 @@ export async function consentScan(rawUrl, options = {}) {
       consentAccepted,
       cmpName,
       consentClickedAt,
+      blocked: block?.blocked || false,
+      blockReason: block?.reason || null,
       verdict,
       before: { nodes: beforeNodes, count: beforeNodes.length },
       after: { nodes: afterNodes, count: afterNodes.length },
