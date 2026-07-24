@@ -141,6 +141,20 @@ test("fail_on_categories narrows what counts", () => {
   assert.equal(r.violations[0].category, "Data Broker");
 });
 
+test("a blocked scan never returns a confident verdict", () => {
+  const scan = scanWith({
+    verdict: "NON_COMPLIANT", accepted: true,
+    before: [node("doubleclick.net", "Advertising")],
+  });
+  scan.blocked = true;
+  scan.blockReason = 'challenge page ("access denied")';
+  const r = evaluate(scan, DEFAULT_POLICY);
+  assert.equal(r.action, "blocked");
+  assert.equal(r.passed, true, "must not fail the build on unreliable data");
+  assert.equal(r.violations.length, 0, "must not assert violations from a challenge page");
+  assert.match(r.reason, /unreliable/);
+});
+
 test("Consent-category domains never count as violations", () => {
   // A CMP classified as Consent is not in any fail_on category.
   const scan = scanWith({

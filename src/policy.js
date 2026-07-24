@@ -105,6 +105,17 @@ export function isAllowed(host, allow) {
  *   }
  */
 export function evaluate(scan, policy = DEFAULT_POLICY) {
+  // A blocked scan saw a challenge page, not the real site. Its findings are
+  // unreliable in both directions, so it can neither fail the build nor certify
+  // the site clean. Surface it as a warning, never a confident verdict.
+  if (scan.blocked) {
+    return {
+      passed: true, action: "blocked", verdict: scan.verdict,
+      violations: [], allowed: [],
+      reason: `Scanner was blocked (${scan.blockReason}). Result is unreliable — re-run, or scan from an allowlisted IP.`,
+    };
+  }
+
   const action = policy.verdicts[VERDICT_KEY[scan.verdict]] ?? "fail";
 
   // Findings = before-consent third parties in a failing category, minus allowlist.
