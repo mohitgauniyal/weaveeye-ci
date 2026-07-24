@@ -23,6 +23,12 @@
     "gdpr", "ccpa", "cipa", "consent", "privacy", "cookies",
     "trackers", "compliance", "ci", "github-action", "playwright"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mohitgauniyal/weaveeye-ci.git"
+  },
+  "homepage": "https://github.com/mohitgauniyal/weaveeye-ci#readme",
+  "bugs": "https://github.com/mohitgauniyal/weaveeye-ci/issues",
   "license": "MIT",
   "dependencies": {
     "playwright": "^1.44.0",
