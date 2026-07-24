@@ -1,0 +1,23 @@
+# WEAVEEYE consent policy.
+# Every option is optional — delete this file entirely to use the defaults.
+
+# Categories that must not appear BEFORE consent. Defaults to the three that
+# require prior consent under GDPR/ePrivacy and carry CIPA exposure in the US.
+fail_on_categories:
+  - Advertising
+  - Analytics
+  - Data Broker
+
+# Domains (and their subdomains) exempt from findings. Put your consent
+# platform here if it isn't auto-classified, plus anything you have a
+# documented lawful basis to load before consent.
+allow: []
+  # - onetrust.com
+  # - cookielaw.org
+
+# How each scan verdict maps to a build outcome: fail | warn | pass.
+verdicts:
+  non_compliant: fail        # trackers fired before an accepted banner
+  no_banner_detected: fail   # tracking with no consent mechanism at all
+  inconclusive: warn         # a banner was present but the scanner couldn't accept it
+  compliant: pass

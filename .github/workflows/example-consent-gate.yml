@@ -1,0 +1,31 @@
+# Example: run the consent gate against a preview deployment on every PR.
+# Copy this into your own repo's .github/workflows/ and adjust the URL step.
+#
+# This file is an example for consumers — it does not run this repo's own CI.
+name: Consent Gate (example)
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write   # needed for the PR comment
+
+jobs:
+  consent:
+    runs-on: ubuntu-latest
+    steps:
+      # Replace this with however you obtain your preview URL — a deploy step,
+      # a Vercel/Netlify preview, a locally started server, etc.
+      - name: Resolve preview URL
+        id: preview
+        run: echo "url=https://example.com" >> "$GITHUB_OUTPUT"
+
+      - name: Consent gate
+        uses: your-org/weaveeye-ci@v0   # or a pinned SHA
+        with:
+          url: ${{ steps.preview.outputs.url }}
+          # policy: .weaveeye.yml        # picked up automatically if present
+          # allow: onetrust.com,cookielaw.org
+          # inconclusive: warn
+          comment: "true"

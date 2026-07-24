@@ -1,0 +1,64 @@
+name: "WEAVEEYE Consent Gate"
+description: "Fail your build when a tracker fires before consent (GDPR / ePrivacy / CIPA)."
+author: "weaveeye"
+branding:
+  icon: "eye"
+  color: "blue"
+
+inputs:
+  url:
+    description: "URL to scan (e.g. your preview deployment)."
+    required: true
+  policy:
+    description: "Path to a .weaveeye.yml/.json policy file. Optional."
+    required: false
+  fail-on:
+    description: "Comma-separated categories that fail the build. Overrides the policy."
+    required: false
+  allow:
+    description: "Comma-separated domains to exempt, added to the policy allowlist."
+    required: false
+  inconclusive:
+    description: "How to treat INCONCLUSIVE: fail | warn | pass."
+    required: false
+  comment:
+    description: "Post/update a summary comment on the pull request."
+    required: false
+    default: "true"
+  github-token:
+    description: "Token for posting the PR comment."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  passed:
+    description: "true if the gate passed."
+    value: ${{ steps.scan.outputs.passed }}
+  verdict:
+    description: "COMPLIANT | NON_COMPLIANT | NO_BANNER_DETECTED | INCONCLUSIVE."
+    value: ${{ steps.scan.outputs.verdict }}
+  violations:
+    description: "Number of consent-requiring trackers that fired before consent."
+    value: ${{ steps.scan.outputs.violations }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install weaveeye-ci and Chromium
+      shell: bash
+      run: |
+        cd "${{ github.action_path }}"
+        npm ci --omit=dev --no-audit --no-fund
+        npx playwright install --with-deps chromium
+    - name: Run consent gate
+      id: scan
+      shell: bash
+      run: node "${{ github.action_path }}/src/action.js"
+      env:
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_POLICY: ${{ inputs.policy }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_ALLOW: ${{ inputs.allow }}
+        INPUT_INCONCLUSIVE: ${{ inputs.inconclusive }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
