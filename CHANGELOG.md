@@ -4,7 +4,7 @@
 
 - **Provenance for every finding.** Each flagged domain now records how it was
   classified (curated map / public tracker database / heuristic), exposed as
-   in JSON and summarised in reports. On a representative site
+  `classifiedBy` in JSON and summarised in reports. On a representative site
   ~98% of findings come from data, ~2% from heuristics; unknown domains are
   never flagged (the tool under-reports rather than over-accuses).
 - **Honest framing.** Output wording scoped to observable facts ("received data
