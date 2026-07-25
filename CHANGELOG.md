@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0
+
+- **Provenance for every finding.** Each flagged domain now records how it was
+  classified (curated map / public tracker database / heuristic), exposed as
+   in JSON and summarised in reports. On a representative site
+  ~98% of findings come from data, ~2% from heuristics; unknown domains are
+  never flagged (the tool under-reports rather than over-accuses).
+- **Honest framing.** Output wording scoped to observable facts ("received data
+  before consent") rather than legal conclusions. Added METHODOLOGY.md
+  documenting exactly what is and is not claimed, and what NON_COMPLIANT means
+  (fails your configured policy, not a legal ruling).
+
 ## v0.2.0
 
 - **Distinguish confirmed data transfers from Consent-Mode-gated tags.** The

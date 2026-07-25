@@ -312,36 +312,59 @@ function suffixRule(h) {
  * category) contributes its parent and defers the category to the next rule.
  */
 export function classifyDomain(hostname) {
+  const { category, parent } = classifyWithSource(hostname);
+  return { category, parent };
+}
+
+// Like classifyDomain, but also reports WHICH rule decided the category — the
+// provenance. Used for transparency ("why was this flagged?") and for auditing
+// how much of a result rests on strong data sources vs weak heuristics.
+//
+// source values, strongest to weakest:
+//   curated-exact         hand-curated map, exact host        (very high)
+//   curated-registered    hand-curated map, registered domain (very high)
+//   trackerdb-exact       Disconnect/DDG, exact host          (high)
+//   trackerdb-registered  Disconnect/DDG, registered domain   (high)
+//   suffix-rule           hand-curated broad suffix           (high)
+//   escalated             subdomain-label heuristic           (medium)
+//   heuristic             keyword in hostname                 (low)
+//   default               nothing matched → Infrastructure    (benign, not flagged)
+export function classifyWithSource(hostname) {
   const h = hostname.replace(/^www\./, "");
   const parts = h.split(".");
   const registered = parts.length > 2 ? parts.slice(-2).join(".") : null;
 
   const rules = [
-    () => EXACT[h],
-    () => lookupTrackerExact(h),
-    () => (registered ? EXACT[registered] : null),
-    () => lookupTrackerRegistered(h),
-    () => suffixRule(h),
-    () => heuristic(h),
+    ["curated-exact", () => EXACT[h]],
+    ["trackerdb-exact", () => lookupTrackerExact(h)],
+    ["curated-registered", () => (registered ? EXACT[registered] : null)],
+    ["trackerdb-registered", () => lookupTrackerRegistered(h)],
+    ["suffix-rule", () => suffixRule(h)],
+    ["heuristic", () => heuristic(h)],
   ];
 
   let parentHint = null;
   let resolved = null;
+  let source = "default";
 
-  for (const rule of rules) {
+  for (const [name, rule] of rules) {
     const hit = rule();
     if (!hit) continue;
     if (!parentHint && hit.parent) parentHint = hit.parent;
     if (hit.category) {
       resolved = { category: hit.category, parent: hit.parent || parentHint };
+      source = name;
       break;
     }
   }
 
-  // Return a fresh object so callers can never mutate the shared maps.
-  if (!resolved) resolved = { category: "Infrastructure", parent: parentHint };
+  if (!resolved) return { category: "Infrastructure", parent: parentHint, source: "default" };
 
-  return escalateTrackingSubdomain(h, resolved);
+  const escalated = escalateTrackingSubdomain(h, resolved);
+  if (escalated.category !== resolved.category) {
+    return { ...escalated, source: "escalated" };
+  }
+  return { ...resolved, source };
 }
 
 // Escalate a benign classification when the leftmost label signals tracking

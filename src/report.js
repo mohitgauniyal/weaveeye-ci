@@ -25,6 +25,20 @@ function fmtBytes(b) {
   return `${b}B`;
 }
 
+// How each classification was decided, grouped into a confidence story. Used to
+// show that findings rest on data, not guesswork.
+const STRONG_SOURCES = new Set([
+  "curated-exact", "curated-registered", "trackerdb-exact", "trackerdb-registered", "suffix-rule",
+]);
+
+function provenanceSummary(violations) {
+  if (!violations.length) return null;
+  const strong = violations.filter(n => STRONG_SOURCES.has(n.source)).length;
+  const pct = Math.round((strong / violations.length) * 100);
+  const weak = violations.length - strong;
+  return { pct, strong, weak };
+}
+
 // ── Terminal ─────────────────────────────────────────────────────────────────
 
 export function formatTerminal(scan, result, { color = true } = {}) {
@@ -73,6 +87,12 @@ export function formatTerminal(scan, result, { color = true } = {}) {
     lines.push(`${c.dim}Plus ${gated} tag${gated !== 1 ? "s" : ""} that loaded before consent but may be gated by Consent Mode (not counted as violations): ${names}${gated > 5 ? ", …" : ""}${c.reset}`);
   }
 
+  const prov = provenanceSummary(result.violations);
+  if (prov) {
+    lines.push("");
+    lines.push(`${c.dim}Classification: ${prov.pct}% of these domains identified from curated data or public tracker databases (Disconnect.me, DuckDuckGo)${prov.weak ? `, ${prov.weak} by hostname heuristic` : ""}. Unknown domains are never flagged.${c.reset}`);
+  }
+
   if (result.allowed.length) {
     lines.push("");
     lines.push(`${c.dim}${result.allowed.length} allowlisted domain(s) suppressed: ${result.allowed.map(n => n.id).join(", ")}${c.reset}`);
@@ -119,6 +139,7 @@ export function formatJson(scan, result) {
     violations: result.violations.map(n => ({
       domain: n.id, category: n.category, owner: n.parent || null,
       firedAtMs: n.time, bytes: n.bytes,
+      classifiedBy: n.source, // provenance — how this domain was identified
     })),
   }, null, 2);
 }

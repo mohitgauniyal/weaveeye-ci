@@ -7,7 +7,7 @@
 // consent vs AFTER. The "before" tracking domains are the finding.
 
 import { chromium } from "playwright";
-import { classifyDomain } from "./classifier.js";
+import { classifyWithSource } from "./classifier.js";
 import { detectCMP, acceptCMP } from "./cmp.js";
 import { buildLabel, sizeFromBytes } from "./labels.js";
 import { computeVerdict, countByCategory, findConfirmedViolations, findGatedTags } from "./verdict.js";
@@ -227,12 +227,13 @@ export async function consentScan(rawUrl, options = {}) {
     const buildNodes = (hostSet) =>
       [...hostSet].map(host => {
         const req = requests.get(host) || { bytes: 0, time: 0, dataFlowBefore: false };
-        const { category, parent } = classifyDomain(host);
+        const { category, parent, source } = classifyWithSource(host);
         const bytes = req.bytes || 0;
         return {
           id: host, label: buildLabel(host), category, parent: parent || null,
           bytes, time: req.time, size: sizeFromBytes(bytes),
           dataFlow: req.dataFlowBefore || false,
+          source, // provenance of the classification — see classifyWithSource
         };
       }).sort((a, b) => a.time - b.time);
 

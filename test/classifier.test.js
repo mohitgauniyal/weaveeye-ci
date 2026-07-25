@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { classifyDomain } from "../src/core/classifier.js";
+import { classifyDomain, classifyWithSource } from "../src/core/classifier.js";
 import { setTrackerMap } from "../src/core/trackers.js";
 
 // A stand-in for the merged DDG + Disconnect map, so these tests never touch
@@ -164,6 +164,45 @@ test("CMP subdomains inherit the Consent classification", () => {
 test("Consent is not a consent-requiring category", async () => {
   const { CONSENT_REQUIRED_CATEGORIES } = await import("../src/core/verdict.js");
   assert.ok(!CONSENT_REQUIRED_CATEGORIES.includes("Consent"));
+});
+
+// ── classifyWithSource: provenance ────────────────────────────────────────────
+
+test("classifyWithSource reports the curated map as the source", () => {
+  const r = classifyWithSource("doubleclick.net");
+  assert.equal(r.category, "Advertising");
+  assert.equal(r.source, "curated-exact");
+});
+
+test("classifyWithSource reports the tracker database as the source", () => {
+  setTrackerMap({ "some-obscure-tracker.io": { category: "Analytics", parent: "Obscure Inc" } });
+  assert.equal(classifyWithSource("some-obscure-tracker.io").source, "trackerdb-exact");
+});
+
+test("classifyWithSource reports a heuristic match", () => {
+  setTrackerMap({});
+  assert.equal(classifyWithSource("random-analytics-thing.example").source, "heuristic");
+});
+
+test("classifyWithSource reports subdomain escalation", () => {
+  setTrackerMap({});
+  assert.equal(classifyWithSource("bat.bing.com").source, "escalated");
+});
+
+test("classifyWithSource reports default for unknown domains", () => {
+  setTrackerMap({});
+  const r = classifyWithSource("zzz-nothing-known.example");
+  assert.equal(r.category, "Infrastructure");
+  assert.equal(r.source, "default");
+});
+
+test("classifyDomain and classifyWithSource agree on category and parent", () => {
+  for (const host of ["doubleclick.net", "bat.bing.com", "zzz-unknown.example"]) {
+    const a = classifyDomain(host);
+    const b = classifyWithSource(host);
+    assert.equal(a.category, b.category);
+    assert.equal(a.parent, b.parent);
+  }
 });
 
 test("consent-requiring categories survive a full round trip", () => {

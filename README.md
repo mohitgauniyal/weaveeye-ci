@@ -26,15 +26,22 @@ npx weaveeye-scan https://staging.example.com
 ```
 WEAVEEYE consent scan — example.com
 
-✗ NON-COMPLIANT  3 consent-requiring trackers fired before consent was given.
+✗ NON-COMPLIANT  3 third parties received data before consent was given.
 CMP: OneTrust   consent accepted at 4.2s   14 before / 22 after
 
-Trackers that fired before consent:
+Data sent to third parties before consent:
   FIRED  CATEGORY     DOMAIN                          OWNER              DATA
   340ms  Advertising  securepubads.g.doubleclick.net  Google / Alphabet  269KB
   520ms  Analytics    static.chartbeat.com            Chartbeat          100KB
   890ms  Data Broker  api.rlcdn.com                   LiveRamp           —
+
+  Classification: 100% of these domains identified from curated data or public
+  tracker databases (Disconnect.me, DuckDuckGo). Unknown domains are never flagged.
 ```
+
+`NON-COMPLIANT` means "does not pass the policy you configured" (e.g. nothing
+before consent) — a check against your rule, not a legal ruling. See
+[METHODOLOGY.md](METHODOLOGY.md) for exactly what is and isn't claimed.
 
 Exit code is **0** if clean, **1** on a violation, **2** on an error — so it
 drops straight into any pipeline.
@@ -155,9 +162,12 @@ To meaningfully test EU behaviour the job must run from an EU IP; for US/CIPA,
 a US IP. A runner in the wrong region will see `NO_BANNER_DETECTED` where a real
 user sees a banner. Choose your runner region deliberately.
 
-**This is not legal advice.** It reports what the browser did, with timestamps.
-Whether a given tracker needs consent in your jurisdiction is a call for your
-counsel — the evidence is here to inform that, not replace it.
+**This is not legal advice.** It reports what the browser did, with timestamps
+and a traceable source for every domain flagged. Whether a given data flow is
+lawful depends on the site's legal basis and jurisdiction — a call for your
+counsel. The evidence is here to inform that, not replace it. Full details of
+how classification works and what is and isn't claimed:
+[METHODOLOGY.md](METHODOLOGY.md).
 
 ---
 
