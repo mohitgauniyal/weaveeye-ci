@@ -15,6 +15,10 @@ CMP tells you that you *have* a banner. This tells you whether the banner is
 actually holding trackers back — and keeps the next deploy from silently
 regressing it.
 
+> **Two ways to use it, two names:** the CLI/npm package is **`weaveeye-scan`**
+> (`npx weaveeye-scan …`); the GitHub Action lives in this repo and is used as
+> **`mohitgauniyal/weaveeye-ci`**. The Action does not require the npm package.
+
 ---
 
 ## Quick start
@@ -61,7 +65,7 @@ jobs:
   consent:
     runs-on: ubuntu-latest
     steps:
-      - uses: your-org/weaveeye-ci@v0
+      - uses: mohitgauniyal/weaveeye-ci@v0
         with:
           url: https://your-preview-deploy.example.com
 ```
@@ -137,7 +141,7 @@ weaveeye-scan <url> [options]
 ## Programmatic API
 
 ```js
-import { consentScan, evaluate, loadPolicy } from "weaveeye-ci";
+import { consentScan, evaluate, loadPolicy } from "weaveeye-scan";
 
 const scan = await consentScan("https://staging.example.com");
 const result = evaluate(scan, loadPolicy(".weaveeye.yml"));

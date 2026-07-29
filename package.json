@@ -1,7 +1,7 @@
 {
-  "name": "weaveeye-ci",
-  "version": "0.1.0",
-  "description": "Fail your build when a tracker fires before consent. A pre-consent tracking gate for CI.",
+  "name": "weaveeye-scan",
+  "version": "0.3.0",
+  "description": "Fail your build when a tracker sends data before consent. A pre-consent tracking gate for CI (GDPR / ePrivacy / CIPA).",
   "type": "module",
   "bin": {
     "weaveeye-scan": "src/cli.js"

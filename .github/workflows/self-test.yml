@@ -1,0 +1,65 @@
+# Proves the gate actually works, end to end, on GitHub's runners — against
+# deterministic local fixtures (no external site, no flakiness). Run it from the
+# Actions tab (Run workflow) or by opening a PR (which also demonstrates the PR
+# comment).
+name: self-test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cli:
+    name: CLI gate on fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Serve fixtures
+        run: |
+          node scripts/serve-fixtures.mjs &
+          for i in $(seq 1 20); do curl -sf http://localhost:8123/clean.html >/dev/null && break; sleep 0.5; done
+      - name: Leaky fixture must FAIL the gate (exit 1)
+        run: |
+          set +e
+          node src/cli.js "http://localhost:8123/leaky.html" --inconclusive fail --no-color
+          code=$?
+          set -e
+          if [ "$code" -ne 1 ]; then echo "::error::expected exit 1 (a violation), got $code"; exit 1; fi
+          echo "OK: the leaky fixture correctly failed the gate"
+      - name: Clean fixture must PASS the gate (exit 0)
+        run: node src/cli.js "http://localhost:8123/clean.html" --no-color
+
+  action:
+    name: GitHub Action end to end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Serve fixtures
+        run: |
+          node scripts/serve-fixtures.mjs &
+          for i in $(seq 1 20); do curl -sf http://localhost:8123/leaky.html >/dev/null && break; sleep 0.5; done
+      - name: Run the Action against the leaky fixture
+        id: gate
+        continue-on-error: true
+        uses: ./
+        with:
+          url: http://localhost:8123/leaky.html
+          inconclusive: warn
+      - name: The Action must have flagged the leaker
+        run: |
+          if [ "${{ steps.gate.outcome }}" != "failure" ]; then
+            echo "::error::the Action should have failed the build on the leaky fixture"; exit 1
+          fi
+          echo "OK: the Action flagged the pre-consent data transfer and failed the build as designed"

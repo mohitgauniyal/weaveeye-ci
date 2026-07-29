@@ -22,7 +22,7 @@ jobs:
         run: echo "url=https://example.com" >> "$GITHUB_OUTPUT"
 
       - name: Consent gate
-        uses: your-org/weaveeye-ci@v0   # or a pinned SHA
+        uses: mohitgauniyal/weaveeye-ci@v0   # or a pinned SHA
         with:
           url: ${{ steps.preview.outputs.url }}
           # policy: .weaveeye.yml        # picked up automatically if present
