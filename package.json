@@ -1,6 +1,6 @@
 {
   "name": "weaveeye-scan",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Fail your build when a tracker sends data before consent. A pre-consent tracking gate for CI (GDPR / ePrivacy / CIPA).",
   "type": "module",
   "bin": {
@@ -20,8 +20,17 @@
     "scan": "node src/cli.js"
   },
   "keywords": [
-    "gdpr", "ccpa", "cipa", "consent", "privacy", "cookies",
-    "trackers", "compliance", "ci", "github-action", "playwright"
+    "gdpr",
+    "ccpa",
+    "cipa",
+    "consent",
+    "privacy",
+    "cookies",
+    "trackers",
+    "compliance",
+    "ci",
+    "github-action",
+    "playwright"
   ],
   "repository": {
     "type": "git",

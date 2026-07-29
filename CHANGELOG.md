@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1
+
+- Docs: added a shared "The WEAVEEYE project" overview to every README (and the
+  npm page) so any entry point explains the whole project and links the others.
+  Retitled the npm-facing README to weaveeye-scan. No code changes.
+
 ## v0.3.0
 
 - **Provenance for every finding.** Each flagged domain now records how it was
