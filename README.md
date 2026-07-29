@@ -1,6 +1,6 @@
-# weaveeye-ci
+# weaveeye-scan
 
-**Fail your build when a tracker fires before consent.**
+**Fail your build when a tracker sends data before consent.**
 
 A pre-consent tracking gate for CI. It loads your site in a real browser,
 detects and accepts the consent banner, and records every third party that
@@ -15,9 +15,27 @@ CMP tells you that you *have* a banner. This tells you whether the banner is
 actually holding trackers back — and keeps the next deploy from silently
 regressing it.
 
-> **Two ways to use it, two names:** the CLI/npm package is **`weaveeye-scan`**
-> (`npx weaveeye-scan …`); the GitHub Action lives in this repo and is used as
-> **`mohitgauniyal/weaveeye-ci`**. The Action does not require the npm package.
+## The WEAVEEYE project
+
+WEAVEEYE checks whether a website loads trackers **before the user consents** —
+the pre-consent tracking that GDPR / ePrivacy and US CIPA lawsuits target. It has
+two halves, across three repos:
+
+**A scanner** — point it at any URL and see, to the millisecond, what data went to
+third-party trackers before consent. The "see the problem" half.
+- [`weaveeye`](https://github.com/mohitgauniyal/weaveeye) — the web app (React)
+- [`weaveeye-api`](https://github.com/mohitgauniyal/weaveeye-api) — the scanning backend (Playwright + Express)
+
+**A CI gate** — the same check in your pipeline, failing the build when a tracker
+sends data before consent. The "stop the problem" half.
+- [`weaveeye-ci`](https://github.com/mohitgauniyal/weaveeye-ci) — this repo: the GitHub Action, published to npm as the CLI [`weaveeye-scan`](https://www.npmjs.com/package/weaveeye-scan). (Action = `mohitgauniyal/weaveeye-ci`; CLI = `npx weaveeye-scan`. The Action does not require the npm package.)
+
+Both halves share one detection engine (classification, CMP handling, verdict
+logic), so a finding in the scanner matches the CI gate. How classification works
+and what is / isn't claimed: [METHODOLOGY](METHODOLOGY.md). A sample scan of real
+sites: [FINDINGS](FINDINGS.md).
+
+_You're reading the docs for the **CI gate** (repo `weaveeye-ci`, npm `weaveeye-scan`)._
 
 ---
 
